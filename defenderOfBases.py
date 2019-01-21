@@ -5,15 +5,16 @@ import os, sys, pygame, random
 from pygame.locals import *
 #from math import pi
 
-size = width, height = 280, 420
+size = width, height = 400, 600
 screen = pygame.display.set_mode(size, 0, 32)
 Fullrect = Rect(0, 0, width,  height)
 pygame.display.set_caption("Defender of Bases")
 pygame.init()
 
+
 ###resources
 fort = pygame.image.load('fort.png').convert_alpha()
-background = pygame.image.load('background.png').convert_alpha()
+#background = pygame.image.load('background.png').convert_alpha()
 score = 0 #global score
 MaxCPUMissiles = 3
 CPUMissiles = 0
@@ -26,6 +27,23 @@ gameClock = pygame.time.Clock()
 #screen.blit(fort, (215, 340))
 #screen.blit(background, (0, 0))
 
+#class for handling moving object updates
+class Updater:
+    forts = []
+    cpuShots = []
+    explosions = []
+    playerShots = []
+    def updateAll():
+        for f in forts:
+            screen.blit(f.image,  (f.x,  f.y))
+        for cs in cpuShots:
+            cs.update()
+        for ex in explosions:
+            ex.update()
+        for ps in playerShots:
+            ps.update()
+        MaxCPUMissiles = (int(score /300)+1)
+Updater update_movement
 #stationary object the player must defend.
 class Fort:
     def __init__(self, image, x, y):
@@ -35,27 +53,28 @@ class Fort:
         self.rect = pygame.Rect(x-5, y-5, 40, 15)
 
 #CPU missiles.
-cpuShots = []
 class Missile:
-    def __init__(self):
+    def __init__(self, Updater update_class):
         global CPUMissiles
         CPUMissiles = CPUMissiles + 1
         self.color = (random.uniform(0, 255), random.uniform(0, 180), random.uniform(0, 180))
-        self.startX = int(random.uniform(0, 280))
-        self.destX = int(random.uniform(0, 280))
-        self.lifetime = 100;
-        self.destPos = [0, 375]
-        self.startPos = [0, 0]
-        self.destPos = (self.destX, int(self.destPos[1]))
-        self.startPos = (self.startX, int(self.startPos[1]))
-        self.lifespan = max( abs(int(self.destPos[0])-int(self.startPos[0])), abs(int(self.destPos[1])-int(self.startPos[1])) )
+        self.startX = int(random.uniform(0, width))
+        self.destX = int(random.uniform(0, width))
+        #Lifetime and lifespan are a confusing choice of words - is lifetime even used?
+        #self.lifetime = 100;
+        self.destPos = [self.destX, int(height*0.9)]
+        self.startPos = [self.startX, 0]
+        #Isn't the Y always
+
+        self.lifespan = max( abs(int(self.destPos[0]-self.startPos[0])), int(self.startPos[1]-self.destPos[1]))
         self.stepx = float(int(self.destPos[0])-int(self.startPos[0]))/self.lifespan
         self.stepy = float(int(self.destPos[1])-int(self.startPos[1]))/self.lifespan
         self.pos = self.startPos
         self.rect = pygame.Rect(self.pos[0], self.pos[1], 16, 16)
-        cpuShots.append(self) #an array we can loop through when updating shots        
+        update_class.cpuShots.append(self) #an array we can loop through when updating shots
     def update(self):
-        self.pos = (self.pos[0] + self.stepx, self.pos[1] + self.stepy)
+        #Doubled the
+        self.pos = (self.pos[0] + 2*self.stepx, self.pos[1] + 2*self.stepy)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], 16, 16)
         self.lifespan = self.lifespan - 1
         #print(self.lifespan)
@@ -130,7 +149,10 @@ class Explosion:
                 if self.rect.colliderect(f.rect):
                     forts.remove(f)
 
-            
+
+
+
+
 
 #setup fort locations.
 forts = []
@@ -141,7 +163,7 @@ def DropShadowText(text,  pos,  size):
     screen.blit(fontimg1, (pos[0], pos[1]))
     fontimg2 = font.render(str(text), 1 ,(255, 140, 140))
     screen.blit(fontimg2, (pos[0]-1, pos[1]-1))
-    
+
 def StartNewGame():
     global score
     score = 0 #global score
@@ -152,7 +174,7 @@ def StartNewGame():
     forts.append(o)
     o = Fort(fort,  215,  380)
     forts.append(o)
-    
+
 while 1:
 
     for event in pygame.event.get():
@@ -168,22 +190,14 @@ while 1:
                     PlayerShot()
         elif event.type == KEYDOWN and event.key == K_F2:
             StartNewGame()
-        
+
     screen.blit(background,  (0, 0))
-    for f in forts:
-        screen.blit(f.image,  (f.x,  f.y))
-    for cs in cpuShots:
-        cs.update()
-    for ex in explosions:
-        ex.update()
-    for ps in playerShots:
-        ps.update()
-    MaxCPUMissiles = (int(score /300)+1)
+
     #print(score)
-    
-       
+
+
     DropShadowText(score,  (130, 392), 40)
-    
+
     if (len(forts) > 0):
         if(CPUMissiles < MaxCPUMissiles):
             Missile()
@@ -194,5 +208,4 @@ while 1:
         #print("game over")
 
     pygame.display.update()
-    pygame.display.flip()   
-    
+    pygame.display.flip()
